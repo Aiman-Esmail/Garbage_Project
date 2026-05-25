@@ -1,80 +1,129 @@
-# Garbage Classifier - Streamlit App
+# ♻️ AI Garbage Classifier
 
-A web application for classifying garbage items using a pre-trained Keras neural network model.
+A production-ready web application that classifies garbage images into 6 categories using a deep learning model trained on Kaggle, deployed via Streamlit and Render.
 
-## Features
+![Python](https://img.shields.io/badge/Python-3.10-blue)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-2.13-orange)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.28-red)
 
-- Upload images (JPG, PNG, GIF, BMP) to classify garbage items
-- Real-time predictions with confidence scores
-- Displays probabilities for all garbage classes
-- User-friendly web interface built with Streamlit
+---
 
-## Prerequisites
+## 🗂️ Project Structure
 
-- Python 3.8 or higher
-- Virtual environment (recommended)
+```
+Garbage_Project/
+├── app.py                            # Streamlit application
+├── convert_model.py                  # H5 → SavedModel conversion
+├── requirements.txt                  # Python dependencies
+├── Dockerfile                        # Container for Render deployment
+├── .env                              # Local secrets (never commit)
+├── .env.example                      # Template for environment variables
+├── .gitignore
+├── README.md
+└── model/
+    ├── Garbage_Classifier_Final_95.h5
+    └── garbage_classifier_saved/     # Converted SavedModel (preferred)
+```
 
-## Setup
+---
 
-1. **Activate the virtual environment** (if you created one):
-   ```bash
-   .venv\Scripts\activate
-   ```
+## 🚀 Quick Start
 
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 1. Clone the Repository
+```bash
+git clone https://github.com/your-username/garbage-classifier.git
+cd garbage-classifier
+```
 
-## Running the App
+### 2. Create Virtual Environment
+```bash
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+source .venv/bin/activate   # macOS/Linux
+```
 
-Start the Streamlit app with:
+### 3. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
 
+### 4. Set Up Environment Variables
+```bash
+cp .env.example .env
+# Edit .env and add your Kaggle credentials
+```
+
+### 5. Convert Model (if needed)
+```bash
+python convert_model.py
+```
+
+### 6. Run the App
 ```bash
 streamlit run app.py
 ```
 
-The app will open in your default web browser at `http://localhost:8501`
+Visit `http://localhost:8501`
 
-## Usage
+---
 
-1. Click "Browse files" or drag and drop an image
-2. Select an image file (JPG, PNG, GIF, or BMP)
-3. The app will display:
-   - The uploaded image
-   - Predicted garbage class
-   - Confidence score
-   - Probabilities for all classes
+## 🧠 Model
 
-## Model Information
+| Property | Value |
+|---|---|
+| Architecture | CNN (Transfer Learning) |
+| Input Size | 224 × 224 × 3 |
+| Output Classes | 6 |
+| Accuracy | ~95% |
+| Format | SavedModel / H5 |
 
-- **Model**: Garbage_Classifier_Final_95.h5
-- **Accuracy**: 95%
-- **Location**: `model/` directory
+### Classes
+| Label | Description |
+|---|---|
+| Cardboard | Boxes, packaging |
+| Glass | Bottles, jars |
+| Metal | Cans, foil |
+| Paper | Newspapers, documents |
+| Plastic | Bottles, bags |
+| Trash | General waste |
 
-## Customization
+---
 
-To modify the class labels, edit the `class_labels` list in `app.py`:
+## 🐳 Docker
 
-```python
-class_labels = [
-    "Cardboard",
-    "Glass",
-    "Metal",
-    "Paper",
-    "Plastic",
-    "Trash"
-]
+```bash
+docker build -t garbage-classifier .
+docker run -p 8501:8501 garbage-classifier
 ```
 
-## Notes
+---
 
-- The app uses image preprocessing to resize images to 224x224 pixels
-- Images are normalized to the [0, 1] range
-- Model predictions are cached for better performance
+## ☁️ Deploy on Render
 
-## Troubleshooting
+1. Push your code to GitHub
+2. Go to [render.com](https://render.com) → New Web Service
+3. Connect your repository
+4. Set environment:
+   - **Runtime:** Docker
+   - **Port:** 8501
+5. Add environment variables from `.env`
+6. Deploy 🚀
 
-- **Model not found**: Ensure `model/Garbage_Classifier_Final_95.h5` exists in the project directory
-- **Slow predictions**: The model is cached after the first load for faster subsequent predictions
-- **Memory issues**: Close other applications if you encounter memory errors
+---
+
+## 🔒 Security Notes
+
+- Never commit `.env` or `kaggle.json` to Git
+- Use Render's environment variable settings for secrets
+- Model files (`.h5`) are excluded from Git — use cloud storage or Git LFS
+
+---
+
+## 🛠️ Troubleshooting
+
+| Problem | Solution |
+|---|---|
+| Model not found | Run `python convert_model.py` |
+| TF loading error | Use SavedModel format instead of H5 |
+| Port 8501 in use | `streamlit run app.py --server.port 8502` |
+| Missing packages | `pip install -r requirements.txt` |

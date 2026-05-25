@@ -1,0 +1,38 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Virtual Environment
+.venv/
+venv/
+env/
+.venv_fix/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Model files
+*.h5
+*.pkl
+*.npy
+*.zip
+model/garbage_classifier_saved/
+model/garbage_classifier_final.keras/
+model/garbage_classifier_v2.keras
+model/garbage_saved_model/
+model/garbage_saved_model.zip
+model/garbage_weights.weights.h5
+model/model_weights_v2.h5
+
+# Kaggle
+kaggle.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
