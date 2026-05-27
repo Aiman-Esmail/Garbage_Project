@@ -26,8 +26,7 @@ CLASSES = [
 IMG_SIZE = (128, 128)
  
 KAGGLE_DATASET = "aimanesmail/garbage-classifier-model"
-MODEL_ZIP      = "model/garbage_saved_model.zip"
-MODEL_DIR      = "model/garbage_saved_model"
+MODEL_DIR      = "model/garbage_classifier_saved"
  
 RECYCLING_TIPS = {
     "Battery":     "🔋 Take to a designated battery recycling point. Never bin it!",
@@ -50,12 +49,35 @@ def download_model():
         return True
     try:
         import kaggle
-        os.makedirs("model", exist_ok=True)
-        kaggle.api.dataset_download_files(
-            KAGGLE_DATASET,
-            path="model",
-            unzip=True
-        )
+        os.makedirs(MODEL_DIR, exist_ok=True)
+        # Download individual files
+        files = [
+            "saved_model.pb",
+            "fingerprint.pb", 
+            "keras_metadata.pb",
+            "variables.data-00000-of-00001",
+            "variables.index"
+        ]
+        for f in files:
+            try:
+                kaggle.api.dataset_download_file(
+                    KAGGLE_DATASET,
+                    file_name=f,
+                    path=MODEL_DIR,
+                    force=True
+                )
+            except:
+                pass
+ 
+        # Move variables to correct folder
+        variables_dir = os.path.join(MODEL_DIR, "variables")
+        os.makedirs(variables_dir, exist_ok=True)
+        for f in ["variables.data-00000-of-00001", "variables.index"]:
+            src = os.path.join(MODEL_DIR, f)
+            dst = os.path.join(variables_dir, f)
+            if os.path.exists(src):
+                os.rename(src, dst)
+ 
         return True
     except Exception as e:
         st.error(f"Failed to download model: {e}")
@@ -64,13 +86,10 @@ def download_model():
 # ── Model Loader ──────────────────────────────────────────────────────────────
 @st.cache_resource(show_spinner="Loading AI model...")
 def load_model():
-    # Download if not exists
     if not os.path.exists(MODEL_DIR):
         with st.spinner("Downloading model from Kaggle..."):
             if not download_model():
                 return None, None
- 
-    # Load model
     try:
         model = tf.saved_model.load(MODEL_DIR)
         infer = model.signatures["serving_default"]
@@ -137,7 +156,6 @@ if uploaded_file:
     with st.spinner("Analyzing image..."):
         label, confidence, probs = predict(model_tuple, img)
  
-    # ── Results ───────────────────────────────────────────────────────────────
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
@@ -147,7 +165,6 @@ if uploaded_file:
  
     st.info(RECYCLING_TIPS[label])
  
-    # ── Probability Chart ─────────────────────────────────────────────────────
     st.write("### 📊 Confidence per Category")
     prob_df = pd.DataFrame({
         "Category": CLASSES,
@@ -156,12 +173,10 @@ if uploaded_file:
  
     st.bar_chart(prob_df.set_index("Category")["Score"])
  
-    # ── Raw Data ──────────────────────────────────────────────────────────────
     with st.expander("🔬 Technical Details"):
         st.dataframe(
             prob_df.style.format({"Score": "{:.4f}"}),
-            use_column_width=True
+            use_container_width=True
         )
         st.caption(f"Model path: `{model_path}`")
         st.caption(f"Input shape: {IMG_SIZE[0]}×{IMG_SIZE[1]}×3")
- 
