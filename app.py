@@ -176,7 +176,7 @@ if uploaded_file:
     with st.expander("🔬 Technical Details"):
         st.dataframe(
             prob_df.style.format({"Score": "{:.4f}"}),
-            use_container_width=True
+            use_column_width=True
         )
         st.caption(f"Model path: `{model_path}`")
         st.caption(f"Input shape: {IMG_SIZE[0]}×{IMG_SIZE[1]}×3")
