@@ -50,10 +50,9 @@ def download_model():
     try:
         import kaggle
         os.makedirs(MODEL_DIR, exist_ok=True)
-        # Download individual files
         files = [
             "saved_model.pb",
-            "fingerprint.pb", 
+            "fingerprint.pb",
             "keras_metadata.pb",
             "variables.data-00000-of-00001",
             "variables.index"
@@ -69,7 +68,6 @@ def download_model():
             except:
                 pass
 
-        # Move variables to correct folder
         variables_dir = os.path.join(MODEL_DIR, "variables")
         os.makedirs(variables_dir, exist_ok=True)
         for f in ["variables.data-00000-of-00001", "variables.index"]:
@@ -99,13 +97,13 @@ def load_model():
         return None, None
 
 # ── Image Preprocessor ────────────────────────────────────────────────────────
-def preprocess(image: Image.Image) -> np.ndarray:
+def preprocess(image):
     img = image.convert("RGB").resize(IMG_SIZE)
-    arr = np.array(img, dtype=np.float32)  # No normalization - model trained on 0-255 range
+    arr = np.array(img, dtype=np.float32)
     return np.expand_dims(arr, axis=0)
 
 # ── Predictor ─────────────────────────────────────────────────────────────────
-def predict(model_tuple, image: Image.Image):
+def predict(model_tuple, image):
     tensor = preprocess(image)
     model_type, model = model_tuple
 
@@ -147,7 +145,7 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file:
     img = Image.open(uploaded_file)
-    st.image(img, caption="Uploaded Image", use_column_width=True)
+    st.image(img, caption="Uploaded Image", use_container_width=True)
 
     if model_tuple is None:
         st.error("⚠️ Model not available.")
@@ -174,9 +172,6 @@ if uploaded_file:
     st.bar_chart(prob_df.set_index("Category")["Score"])
 
     with st.expander("🔬 Technical Details"):
-        st.dataframe(
-            prob_df.style.format({"Score": "{:.4f}"}),
-            use_column_width=True
-        )
+        st.dataframe(prob_df.style.format({"Score": "{:.4f}"}))
         st.caption(f"Model path: `{model_path}`")
-        st.caption(f"Input shape: {IMG_SIZE[0]}×{IMG_SIZE[1]}×3")
+        st.caption(f"Input shape: {IMG_SIZE[0]}x{IMG_SIZE[1]}x3")
