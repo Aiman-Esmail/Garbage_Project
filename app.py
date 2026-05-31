@@ -145,7 +145,7 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file:
     img = Image.open(uploaded_file)
-    st.image(img, caption="Uploaded Image", use_container_width=True)
+    st.image(img, caption="Uploaded Image", use_column_width=True)
 
     if model_tuple is None:
         st.error("⚠️ Model not available.")
