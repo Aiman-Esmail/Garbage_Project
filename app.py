@@ -327,31 +327,23 @@ with col_result:
         """, unsafe_allow_html=True)
 
         # ── Correction Button ──────────────────────────────────────────────
-        st.markdown("<div class='correction-box'>", unsafe_allow_html=True)
-        st.markdown("<div class='correction-title'>⚠️ Falsch erkannt? Bitte korrigieren:</div>", unsafe_allow_html=True)
+        st.divider()
+        st.markdown("⚠️ **Falsch erkannt? Bitte korrigieren:**")
 
         classes_de_list = [CLASSES_DE[c] for c in CLASSES]
         correct_label_de = st.selectbox(
             "Richtige Kategorie:",
             options=classes_de_list,
-            index=classes_de_list.index(label_de),
-            label_visibility="collapsed"
+            index=classes_de_list.index(label_de)
         )
 
         if st.button("✅ Korrektur speichern", use_container_width=True):
             correct_label_en = [k for k, v in CLASSES_DE.items() if v == correct_label_de][0]
             if correct_label_en != label:
                 save_correction(label, correct_label_en)
-                st.markdown(f"""
-                <div class='success-box'>
-                    ✅ Danke! Korrektur gespeichert:<br>
-                    <b>{label_de}</b> → <b>{correct_label_de}</b><br>
-                    <small>Hilft das Modell zu verbessern</small>
-                </div>
-                """, unsafe_allow_html=True)
+                st.success(f"Danke! Korrektur gespeichert: {label_de} → {correct_label_de}")
             else:
                 st.info("Die Erkennung war bereits korrekt!")
-        st.markdown("</div>", unsafe_allow_html=True)
 
     else:
         st.markdown("""
