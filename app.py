@@ -159,6 +159,7 @@ IMG_SIZE = (128, 128)
 KAGGLE_DATASET = "aimanesmail/garbage-classifier-model"
 MODEL_DIR = "model/garbage_classifier_saved"
 CORRECTIONS_FILE = "corrections.json"
+HISTORY_FILE = "history.json"
 
 # ── Load/Save Corrections ─────────────────────────────────────────────────────
 def load_corrections():
@@ -176,6 +177,25 @@ def save_correction(predicted, correct):
     })
     with open(CORRECTIONS_FILE, "w") as f:
         json.dump(corrections, f, indent=2)
+
+# ── Load/Save History ─────────────────────────────────────────────────────────
+def load_history():
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+def save_history(label, confidence):
+    history = load_history()
+    history.insert(0, {
+        "time": datetime.datetime.now().strftime("%d.%m %H:%M"),
+        "label": label,
+        "label_de": CLASSES_DE[label],
+        "confidence": round(confidence, 1)
+    })
+    history = history[:20]
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(history, f, indent=2)
 
 # ── Download Model ────────────────────────────────────────────────────────────
 def download_model():
@@ -258,6 +278,21 @@ with st.sidebar:
         st.markdown(f"**📊 Korrekturen: {len(corrections)}**")
         st.caption("Hilft das Modell zu verbessern")
 
+    # History
+    history = load_history()
+    if history:
+        st.divider()
+        st.markdown("**🕐 Letzte Analysen**")
+        for h in history[:5]:
+            st.markdown(f"""
+            <div style='background:#111811; border:1px solid #2d5a2d; border-radius:8px;
+                        padding:8px 12px; margin:4px 0; font-size:12px;'>
+                <span style='color:#22c55e; font-weight:600;'>{h['label_de']}</span>
+                <span style='color:#6b7280;'> — {h['confidence']}%</span><br>
+                <span style='color:#4b5563;'>{h['time']}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
     st.divider()
     st.markdown("""
     <div style='font-size:12px; color:#4b5563;'>
@@ -304,6 +339,7 @@ with col_result:
 
         with st.spinner("Wird analysiert..."):
             label, confidence, probs = predict(model_tuple, img)
+            save_history(label, confidence)
 
         label_de = CLASSES_DE[label]
         tonne = TONNE_DE[label]
