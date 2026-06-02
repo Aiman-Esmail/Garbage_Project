@@ -2,11 +2,17 @@ import streamlit as st
 import os
 import json
 import datetime
+import io
 from dotenv import load_dotenv
 from PIL import Image
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.lib.units import cm
 
 load_dotenv()
 
@@ -197,6 +203,81 @@ def save_history(label, confidence):
     with open(HISTORY_FILE, "w") as f:
         json.dump(history, f, indent=2)
 
+# ── Generate PDF Report ───────────────────────────────────────────────────────
+def generate_pdf(label, label_de, confidence, tonne, tip, filename):
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+                            rightMargin=2*cm, leftMargin=2*cm,
+                            topMargin=2*cm, bottomMargin=2*cm)
+
+    styles = getSampleStyleSheet()
+    green = colors.HexColor("#22c55e")
+    dark = colors.HexColor("#0a0f0a")
+
+    title_style = ParagraphStyle('title', fontSize=24, fontName='Helvetica-Bold',
+                                  textColor=green, spaceAfter=6)
+    subtitle_style = ParagraphStyle('subtitle', fontSize=11, fontName='Helvetica',
+                                     textColor=colors.HexColor("#6b7280"), spaceAfter=20)
+    label_style = ParagraphStyle('label', fontSize=10, fontName='Helvetica',
+                                  textColor=colors.HexColor("#9ca3af"), spaceAfter=2)
+    value_style = ParagraphStyle('value', fontSize=16, fontName='Helvetica-Bold',
+                                  textColor=colors.white, spaceAfter=12)
+    tip_style = ParagraphStyle('tip', fontSize=11, fontName='Helvetica',
+                                textColor=colors.HexColor("#bbf7d0"), spaceAfter=6)
+
+    story = []
+
+    # Header
+    story.append(Paragraph("MullAI", title_style))
+    story.append(Paragraph("Intelligente Abfallklassifizierung — Analysebericht", subtitle_style))
+    story.append(HRFlowable(width="100%", thickness=1, color=green))
+    story.append(Spacer(1, 0.5*cm))
+
+    # Date
+    now = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+    story.append(Paragraph("Analysedatum", label_style))
+    story.append(Paragraph(now, value_style))
+
+    # Result table
+    data = [
+        ["Erkannter Abfall", label_de],
+        ["Konfidenz", f"{confidence:.1f}%"],
+        ["Entsorgung", tonne.replace("🔋","").replace("🟤","").replace("🟫","").replace("📦","").replace("👕","").replace("🟢","").replace("🥫","").replace("📄","").replace("♻️","").replace("👟","").replace("🗑️","").replace("⬜","").strip()],
+    ]
+    table = Table(data, colWidths=[5*cm, 12*cm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#1a3a1a")),
+        ('BACKGROUND', (1, 0), (1, -1), colors.HexColor("#111811")),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor("#9ca3af")),
+        ('TEXTCOLOR', (1, 0), (1, -1), colors.white),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 12),
+        ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.HexColor("#111811"), colors.HexColor("#0d1f0d")]),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#2d5a2d")),
+        ('PADDING', (0, 0), (-1, -1), 10),
+    ]))
+    story.append(table)
+    story.append(Spacer(1, 0.5*cm))
+
+    # Tip
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#2d5a2d")))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph("Recycling-Hinweis", label_style))
+    tip_clean = tip.replace("✅","").replace("⚠️","").strip()
+    story.append(Paragraph(tip_clean, tip_style))
+
+    story.append(Spacer(1, 1*cm))
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#2d5a2d")))
+    story.append(Spacer(1, 0.3*cm))
+    footer = ParagraphStyle('footer', fontSize=9, fontName='Helvetica',
+                             textColor=colors.HexColor("#4b5563"))
+    story.append(Paragraph("MullAI v1.0 | Powered by MobileNetV2 | Entwickelt von Aiman Esmail | Hamburg, Deutschland", footer))
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
 # ── Download Model ────────────────────────────────────────────────────────────
 def download_model():
     if os.path.exists(MODEL_DIR):
@@ -361,6 +442,17 @@ with col_result:
         </div>
         <div class='tip-box'>{tip}</div>
         """, unsafe_allow_html=True)
+
+        # ── PDF Download ───────────────────────────────────────────────────
+        pdf_buffer = generate_pdf(label, label_de, confidence, tonne, tip,
+                                   f"MuellAI_{label_de}_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.pdf")
+        st.download_button(
+            label="📄 PDF-Bericht herunterladen",
+            data=pdf_buffer,
+            file_name=f"MuellAI_{label_de}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
 
         # ── Correction Button ──────────────────────────────────────────────
         st.divider()
