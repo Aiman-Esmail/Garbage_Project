@@ -210,69 +210,81 @@ def generate_pdf(label, label_de, confidence, tonne, tip, filename):
                             rightMargin=2*cm, leftMargin=2*cm,
                             topMargin=2*cm, bottomMargin=2*cm)
 
-    styles = getSampleStyleSheet()
-    green = colors.HexColor("#22c55e")
-    dark = colors.HexColor("#0a0f0a")
+    green = colors.HexColor("#16a34a")
+    dark_text = colors.HexColor("#111827")
+    gray_text = colors.HexColor("#4b5563")
+    light_gray = colors.HexColor("#6b7280")
 
-    title_style = ParagraphStyle('title', fontSize=24, fontName='Helvetica-Bold',
-                                  textColor=green, spaceAfter=6)
+    title_style = ParagraphStyle('title', fontSize=28, fontName='Helvetica-Bold',
+                                  textColor=green, spaceAfter=4)
     subtitle_style = ParagraphStyle('subtitle', fontSize=11, fontName='Helvetica',
-                                     textColor=colors.HexColor("#6b7280"), spaceAfter=20)
-    label_style = ParagraphStyle('label', fontSize=10, fontName='Helvetica',
-                                  textColor=colors.HexColor("#9ca3af"), spaceAfter=2)
-    value_style = ParagraphStyle('value', fontSize=16, fontName='Helvetica-Bold',
-                                  textColor=colors.white, spaceAfter=12)
+                                     textColor=gray_text, spaceAfter=16)
+    label_style = ParagraphStyle('label', fontSize=9, fontName='Helvetica',
+                                  textColor=light_gray, spaceAfter=2, leading=14)
+    value_style = ParagraphStyle('value', fontSize=15, fontName='Helvetica-Bold',
+                                  textColor=dark_text, spaceAfter=10)
     tip_style = ParagraphStyle('tip', fontSize=11, fontName='Helvetica',
-                                textColor=colors.HexColor("#bbf7d0"), spaceAfter=6)
+                                textColor=dark_text, spaceAfter=6, leading=16)
+    footer_style = ParagraphStyle('footer', fontSize=8, fontName='Helvetica',
+                                   textColor=light_gray, leading=12)
 
     story = []
 
     # Header
     story.append(Paragraph("MullAI", title_style))
     story.append(Paragraph("Intelligente Abfallklassifizierung — Analysebericht", subtitle_style))
-    story.append(HRFlowable(width="100%", thickness=1, color=green))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=green))
     story.append(Spacer(1, 0.5*cm))
 
     # Date
     now = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
-    story.append(Paragraph("Analysedatum", label_style))
+    story.append(Paragraph("ANALYSEDATUM", label_style))
     story.append(Paragraph(now, value_style))
+    story.append(Spacer(1, 0.3*cm))
 
     # Result table
+    tonne_clean = tonne
+    for emoji in ["🔋","🟤","🟫","📦","👕","🟢","🥫","📄","♻️","👟","🗑️","⬜"]:
+        tonne_clean = tonne_clean.replace(emoji, "").strip()
+
     data = [
         ["Erkannter Abfall", label_de],
         ["Konfidenz", f"{confidence:.1f}%"],
-        ["Entsorgung", tonne.replace("🔋","").replace("🟤","").replace("🟫","").replace("📦","").replace("👕","").replace("🟢","").replace("🥫","").replace("📄","").replace("♻️","").replace("👟","").replace("🗑️","").replace("⬜","").strip()],
+        ["Entsorgung", tonne_clean],
     ]
     table = Table(data, colWidths=[5*cm, 12*cm])
     table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#1a3a1a")),
-        ('BACKGROUND', (1, 0), (1, -1), colors.HexColor("#111811")),
-        ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor("#9ca3af")),
-        ('TEXTCOLOR', (1, 0), (1, -1), colors.white),
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f0fdf4")),
+        ('BACKGROUND', (1, 0), (1, -1), colors.white),
+        ('TEXTCOLOR', (0, 0), (0, -1), gray_text),
+        ('TEXTCOLOR', (1, 0), (1, -1), dark_text),
         ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
         ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 12),
-        ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.HexColor("#111811"), colors.HexColor("#0d1f0d")]),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#2d5a2d")),
-        ('PADDING', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#d1fae5")),
+        ('PADDING', (0, 0), (-1, -1), 12),
+        ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.HexColor("#f0fdf4"), colors.HexColor("#ffffff")]),
     ]))
     story.append(table)
-    story.append(Spacer(1, 0.5*cm))
+    story.append(Spacer(1, 0.6*cm))
 
     # Tip
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#2d5a2d")))
-    story.append(Spacer(1, 0.3*cm))
-    story.append(Paragraph("Recycling-Hinweis", label_style))
-    tip_clean = tip.replace("✅","").replace("⚠️","").strip()
+    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#d1fae5")))
+    story.append(Spacer(1, 0.4*cm))
+    story.append(Paragraph("RECYCLING-HINWEIS", label_style))
+    tip_clean = tip
+    for emoji in ["✅","⚠️"]:
+        tip_clean = tip_clean.replace(emoji, "").strip()
     story.append(Paragraph(tip_clean, tip_style))
 
-    story.append(Spacer(1, 1*cm))
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#2d5a2d")))
+    story.append(Spacer(1, 1.5*cm))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#d1fae5")))
     story.append(Spacer(1, 0.3*cm))
-    footer = ParagraphStyle('footer', fontSize=9, fontName='Helvetica',
-                             textColor=colors.HexColor("#4b5563"))
-    story.append(Paragraph("MullAI v1.0 | Powered by MobileNetV2 | Entwickelt von Aiman Esmail | Hamburg, Deutschland", footer))
+    story.append(Paragraph(
+        "MullAI v1.0 | Powered by MobileNetV2 | Entwickelt von Aiman Esmail<br/>"
+        "Hamburg, Schleswig-Holstein, Deutschland",
+        footer_style
+    ))
 
     doc.build(story)
     buffer.seek(0)
