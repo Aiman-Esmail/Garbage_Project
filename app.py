@@ -5,44 +5,286 @@ from PIL import Image
 import numpy as np
 import pandas as pd
 import tensorflow as tf
- 
-# ── Environment ──────────────────────────────────────────────────────────────
+
 load_dotenv()
- 
-# ── Page Config ───────────────────────────────────────────────────────────────
+
 st.set_page_config(
-    page_title="AI Garbage Classifier",
+    page_title="MüllAI — Intelligente Abfallerkennung",
     page_icon="♻️",
-    layout="centered"
+    layout="wide"
 )
- 
+
+# ── Deutsches Design ──────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;600;700&display=swap');
+
+* { font-family: 'DM Sans', sans-serif; }
+
+/* Hide Streamlit branding */
+#MainMenu, footer, header { visibility: hidden; }
+
+.stApp {
+    background: #0a0f0a;
+    color: #e8f5e8;
+}
+
+/* Hero Header */
+.hero {
+    background: linear-gradient(135deg, #0d1f0d 0%, #1a3a1a 50%, #0d2a1a 100%);
+    border: 1px solid #2d5a2d;
+    border-radius: 16px;
+    padding: 40px;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(34,197,94,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+}
+
+.hero-badge {
+    display: inline-block;
+    background: rgba(34,197,94,0.15);
+    border: 1px solid rgba(34,197,94,0.3);
+    color: #22c55e;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+}
+
+.hero h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 48px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 0 8px 0;
+    line-height: 1.1;
+}
+
+.hero h1 span { color: #22c55e; }
+
+.hero p {
+    color: #9ca3af;
+    font-size: 16px;
+    margin: 0;
+    max-width: 500px;
+}
+
+/* Stats Bar */
+.stats-bar {
+    display: flex;
+    gap: 32px;
+    margin-top: 28px;
+}
+
+.stat {
+    text-align: left;
+}
+
+.stat-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: #22c55e;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+}
+
+/* Upload Zone */
+.upload-section {
+    background: #111811;
+    border: 2px dashed #2d5a2d;
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+/* Result Card */
+.result-card {
+    background: linear-gradient(135deg, #111811, #0d1f0d);
+    border: 1px solid #2d5a2d;
+    border-radius: 16px;
+    padding: 28px;
+    margin: 20px 0;
+}
+
+.result-label {
+    font-size: 12px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.result-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 36px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.confidence-bar-bg {
+    background: #1f2d1f;
+    border-radius: 100px;
+    height: 8px;
+    margin-top: 12px;
+    overflow: hidden;
+}
+
+.confidence-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #16a34a, #22c55e);
+    border-radius: 100px;
+    transition: width 1s ease;
+}
+
+/* Tip Box */
+.tip-box {
+    background: rgba(34,197,94,0.08);
+    border: 1px solid rgba(34,197,94,0.2);
+    border-left: 4px solid #22c55e;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    color: #bbf7d0;
+    font-size: 14px;
+}
+
+/* Category Pills */
+.category-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.category-pill {
+    background: #1a2e1a;
+    border: 1px solid #2d5a2d;
+    color: #86efac;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Sidebar */
+.css-1d391kg, [data-testid="stSidebar"] {
+    background: #0d1a0d !important;
+    border-right: 1px solid #1f3d1f !important;
+}
+
+/* Metrics */
+[data-testid="metric-container"] {
+    background: #111811;
+    border: 1px solid #2d5a2d;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+[data-testid="stMetricValue"] {
+    color: #22c55e !important;
+    font-family: 'Space Grotesk', sans-serif !important;
+}
+
+/* Chart */
+[data-testid="stArrowVegaLiteChart"] {
+    background: #111811 !important;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    color: #374151;
+    font-size: 12px;
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid #1f2d1f;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ── Constants ─────────────────────────────────────────────────────────────────
 CLASSES = [
     'Battery', 'Biological', 'Brown-Glass', 'Cardboard',
     'Clothes', 'Green-Glass', 'Metal', 'Paper',
     'Plastic', 'Shoes', 'Trash', 'White-Glass'
 ]
-IMG_SIZE = (128, 128)
- 
-KAGGLE_DATASET = "aimanesmail/garbage-classifier-model"
-MODEL_DIR      = "model/garbage_classifier_saved"
- 
-RECYCLING_TIPS = {
-    "Battery":     "🔋 Take to a designated battery recycling point. Never bin it!",
-    "Biological":  "🌱 Compost organic waste or use a bio bin.",
-    "Brown-Glass": "🍺 Rinse and place in the brown glass bin.",
-    "Cardboard":   "📦 Flatten boxes before recycling. Keep dry!",
-    "Clothes":     "👕 Donate if reusable, or take to a textile recycling point.",
-    "Green-Glass": "🍾 Rinse and place in the green glass bin.",
-    "Metal":       "🥫 Crush cans to save space. Rinse food residue.",
-    "Paper":       "📄 Keep paper dry and clean for recycling.",
-    "Plastic":     "🧴 Check the resin code. Rinse containers.",
-    "Shoes":       "👟 Donate if wearable, or drop at a shoe recycling point.",
-    "Trash":       "🗑️ This item goes to general waste.",
-    "White-Glass": "🥛 Rinse and place in the white/clear glass bin.",
+
+CLASSES_DE = {
+    'Battery':     'Batterie',
+    'Biological':  'Bioabfall',
+    'Brown-Glass': 'Braunglas',
+    'Cardboard':   'Karton',
+    'Clothes':     'Kleidung',
+    'Green-Glass': 'Grünglas',
+    'Metal':       'Metall',
+    'Paper':       'Papier',
+    'Plastic':     'Kunststoff',
+    'Shoes':       'Schuhe',
+    'Trash':       'Restmüll',
+    'White-Glass': 'Weißglas',
 }
- 
-# ── Download Model from Kaggle ────────────────────────────────────────────────
+
+TONNE_DE = {
+    'Battery':     '🔋 Sondermüll / Rückgabestelle',
+    'Biological':  '🟤 Biotonne',
+    'Brown-Glass': '🟫 Altglascontainer (Braun)',
+    'Cardboard':   '📦 Papiertonne / Blaue Tonne',
+    'Clothes':     '👕 Altkleidercontainer',
+    'Green-Glass': '🟢 Altglascontainer (Grün)',
+    'Metal':       '🥫 Gelbe Tonne / Wertstofftonne',
+    'Paper':       '📄 Papiertonne / Blaue Tonne',
+    'Plastic':     '♻️ Gelbe Tonne / Gelber Sack',
+    'Shoes':       '👟 Altkleidercontainer',
+    'Trash':       '🗑️ Restmülltonne',
+    'White-Glass': '⬜ Altglascontainer (Weiß)',
+}
+
+RECYCLING_TIPS_DE = {
+    'Battery':     '⚠️ Batterien gehören NICHT in den Hausmüll! Abgabe im Handel oder an Sammelstellen.',
+    'Biological':  '✅ In die Biotonne oder kompostieren. Kein Fleisch oder gekochte Speisen.',
+    'Brown-Glass': '✅ Deckel entfernen, ausspülen und in den Braunglas-Container.',
+    'Cardboard':   '✅ Kartons flach falten und in die blaue Tonne oder Papiertonne.',
+    'Clothes':     '✅ Saubere Kleidung in Altkleidercontainer. Beschädigte Kleidung in den Restmüll.',
+    'Green-Glass': '✅ Deckel entfernen, ausspülen und in den Grünglas-Container.',
+    'Metal':       '✅ Dosen ausspülen und in die gelbe Tonne oder den gelben Sack.',
+    'Paper':       '✅ Sauberes Papier in die blaue Tonne. Verschmutztes Papier in den Restmüll.',
+    'Plastic':     '✅ Verpackungen ausspülen und in die gelbe Tonne oder den gelben Sack.',
+    'Shoes':       '✅ Paarweise zusammenbinden und in den Altkleidercontainer.',
+    'Trash':       '⚠️ Gehört in die graue Restmülltonne. Prüfen ob Recycling möglich ist.',
+    'White-Glass': '✅ Deckel entfernen, ausspülen und in den Weißglas-Container.',
+}
+
+IMG_SIZE = (128, 128)
+KAGGLE_DATASET = "aimanesmail/garbage-classifier-model"
+MODEL_DIR = "model/garbage_classifier_saved"
+
+# ── Download Model ────────────────────────────────────────────────────────────
 def download_model():
     if os.path.exists(MODEL_DIR):
         return True
@@ -50,23 +292,14 @@ def download_model():
         import kaggle
         os.makedirs(MODEL_DIR, exist_ok=True)
         files = [
-            "saved_model.pb",
-            "fingerprint.pb",
-            "keras_metadata.pb",
-            "variables.data-00000-of-00001",
-            "variables.index"
+            "saved_model.pb", "fingerprint.pb", "keras_metadata.pb",
+            "variables.data-00000-of-00001", "variables.index"
         ]
         for f in files:
             try:
-                kaggle.api.dataset_download_file(
-                    KAGGLE_DATASET,
-                    file_name=f,
-                    path=MODEL_DIR,
-                    force=True
-                )
+                kaggle.api.dataset_download_file(KAGGLE_DATASET, file_name=f, path=MODEL_DIR, force=True)
             except:
                 pass
- 
         variables_dir = os.path.join(MODEL_DIR, "variables")
         os.makedirs(variables_dir, exist_ok=True)
         for f in ["variables.data-00000-of-00001", "variables.index"]:
@@ -74,17 +307,16 @@ def download_model():
             dst = os.path.join(variables_dir, f)
             if os.path.exists(src):
                 os.rename(src, dst)
- 
         return True
     except Exception as e:
-        st.error(f"Failed to download model: {e}")
+        st.error(f"Modell-Download fehlgeschlagen: {e}")
         return False
- 
-# ── Model Loader ──────────────────────────────────────────────────────────────
-@st.cache_resource(show_spinner="Loading AI model...")
+
+# ── Load Model ────────────────────────────────────────────────────────────────
+@st.cache_resource(show_spinner="KI-Modell wird geladen...")
 def load_model():
     if not os.path.exists(MODEL_DIR):
-        with st.spinner("Downloading model from Kaggle..."):
+        with st.spinner("Modell wird von Kaggle heruntergeladen..."):
             if not download_model():
                 return None, None
     try:
@@ -92,85 +324,163 @@ def load_model():
         infer = model.signatures["serving_default"]
         return ("saved_model", infer), MODEL_DIR
     except Exception as e:
-        st.error(f"Model load failed: {e}")
+        st.error(f"Modell konnte nicht geladen werden: {e}")
         return None, None
- 
-# ── Image Preprocessor ────────────────────────────────────────────────────────
+
+# ── Predict ───────────────────────────────────────────────────────────────────
 def preprocess(image):
     img = image.convert("RGB").resize(IMG_SIZE)
     arr = np.array(img, dtype=np.float32)
     return np.expand_dims(arr, axis=0)
- 
-# ── Predictor ─────────────────────────────────────────────────────────────────
+
 def predict(model_tuple, image):
     tensor = preprocess(image)
     model_type, model = model_tuple
- 
     if model_type == "saved_model":
         input_tensor = tf.constant(tensor, dtype=tf.float32)
         result = model(input_tensor)
         preds = list(result.values())[0].numpy()[0]
     else:
         preds = model.predict(tensor, verbose=0)[0]
- 
     idx = int(np.argmax(preds))
     return CLASSES[idx], float(preds[idx]) * 100, preds
- 
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.title("⚙️ System Status")
+    st.markdown("### ⚙️ Systemstatus")
     model_tuple, model_path = load_model()
- 
+
     if model_tuple:
-        st.success("✅ Model loaded")
-        st.caption(f"Source: `{model_path}`")
+        st.success("✅ Modell geladen")
     else:
-        st.error("❌ No model found")
- 
+        st.error("❌ Modell nicht gefunden")
+
     st.divider()
-    st.markdown("**Classes**")
-    for c in CLASSES:
-        st.markdown(f"- {c}")
- 
-# ── Main UI ───────────────────────────────────────────────────────────────────
-st.title("♻️ AI Garbage Classifier")
-st.caption("Upload an image and the AI will classify the type of garbage.")
- 
-uploaded_file = st.file_uploader(
-    "Upload an image",
-    type=["jpg", "jpeg", "png"],
-    help="Supported formats: JPG, JPEG, PNG"
-)
- 
-if uploaded_file:
-    img = Image.open(uploaded_file)
-    st.image(img, caption="Uploaded Image", use_column_width=True)
- 
-    if model_tuple is None:
-        st.error("⚠️ Model not available.")
-        st.stop()
- 
-    with st.spinner("Analyzing image... (may take up to 60 seconds on first run)"):
-        label, confidence, probs = predict(model_tuple, img)
- 
+    st.markdown("**Erkannte Kategorien**")
+    st.markdown("""
+    <div class='category-grid'>
+    """ + "".join([f"<span class='category-pill'>{v}</span>" for v in CLASSES_DE.values()]) + """
+    </div>
+    """, unsafe_allow_html=True)
+
     st.divider()
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("🏷️ Prediction", label)
-    with col2:
-        st.metric("🎯 Confidence", f"{confidence:.1f}%")
- 
-    st.info(RECYCLING_TIPS[label])
- 
-    st.write("### 📊 Confidence per Category")
+    st.markdown("""
+    <div style='font-size:12px; color:#4b5563;'>
+    MüllAI v1.0<br>
+    Powered by MobileNetV2<br>
+    Genauigkeit: 94.33%
+    </div>
+    """, unsafe_allow_html=True)
+
+# ── Hero ──────────────────────────────────────────────────────────────────────
+st.markdown("""
+<div class='hero'>
+    <div class='hero-badge'>♻️ KI-gestützte Abfallerkennung</div>
+    <h1>Müll<span>AI</span></h1>
+    <p>Intelligente Abfallklassifizierung für Unternehmen — präzise, schnell und DSGVO-konform.</p>
+    <div class='stats-bar'>
+        <div class='stat'>
+            <div class='stat-value'>94%</div>
+            <div class='stat-label'>Genauigkeit</div>
+        </div>
+        <div class='stat'>
+            <div class='stat-value'>12</div>
+            <div class='stat-label'>Kategorien</div>
+        </div>
+        <div class='stat'>
+            <div class='stat-value'>&lt;2s</div>
+            <div class='stat-label'>Analysezeit</div>
+        </div>
+        <div class='stat'>
+            <div class='stat-value'>15K+</div>
+            <div class='stat-label'>Trainingsbilder</div>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# ── Upload ────────────────────────────────────────────────────────────────────
+col_upload, col_result = st.columns([1, 1], gap="large")
+
+with col_upload:
+    st.markdown("#### 📸 Bild hochladen")
+    uploaded_file = st.file_uploader(
+        "Ziehen Sie ein Bild hierher oder klicken Sie zum Auswählen",
+        type=["jpg", "jpeg", "png"],
+        label_visibility="collapsed"
+    )
+
+    if uploaded_file:
+        img = Image.open(uploaded_file)
+        st.image(img, caption="Hochgeladenes Bild", use_column_width=True)
+
+with col_result:
+    if uploaded_file:
+        st.markdown("#### 🔍 Analyseergebnis")
+
+        if model_tuple is None:
+            st.error("⚠️ Modell nicht verfügbar.")
+            st.stop()
+
+        with st.spinner("Wird analysiert..."):
+            label, confidence, probs = predict(model_tuple, img)
+
+        label_de = CLASSES_DE[label]
+        tonne = TONNE_DE[label]
+        tip = RECYCLING_TIPS_DE[label]
+
+        st.markdown(f"""
+        <div class='result-card'>
+            <div class='result-label'>Erkannter Abfall</div>
+            <div class='result-value'>{label_de}</div>
+            <div class='result-label' style='margin-top:16px;'>Konfidenz</div>
+            <div class='result-value' style='font-size:28px; color:#22c55e;'>{confidence:.1f}%</div>
+            <div class='confidence-bar-bg'>
+                <div class='confidence-bar-fill' style='width:{confidence}%;'></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown(f"""
+        <div class='result-card' style='margin-top:12px;'>
+            <div class='result-label'>Entsorgung</div>
+            <div style='font-size:20px; font-weight:600; color:#fff; margin-top:4px;'>{tonne}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown(f"<div class='tip-box'>{tip}</div>", unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div style='height:300px; display:flex; align-items:center; justify-content:center;
+                    background:#111811; border-radius:12px; border:1px solid #2d5a2d;'>
+            <div style='text-align:center; color:#4b5563;'>
+                <div style='font-size:48px;'>♻️</div>
+                <div style='margin-top:12px; font-size:14px;'>
+                    Laden Sie ein Bild hoch,<br>um die Analyse zu starten
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+# ── Chart ─────────────────────────────────────────────────────────────────────
+if uploaded_file and 'probs' in dir():
+    st.divider()
+    st.markdown("#### 📊 Konfidenz pro Kategorie")
     prob_df = pd.DataFrame({
-        "Category": CLASSES,
-        "Score": probs
-    }).sort_values("Score", ascending=False)
- 
-    st.bar_chart(prob_df.set_index("Category")["Score"])
- 
-    with st.expander("🔬 Technical Details"):
-        st.dataframe(prob_df.style.format({"Score": "{:.4f}"}))
-        st.caption(f"Model path: `{model_path}`")
-        st.caption(f"Input shape: {IMG_SIZE[0]}x{IMG_SIZE[1]}x3")
+        "Kategorie": [CLASSES_DE[c] for c in CLASSES],
+        "Konfidenz": probs
+    }).sort_values("Konfidenz", ascending=False)
+    st.bar_chart(prob_df.set_index("Kategorie")["Konfidenz"])
+
+    with st.expander("🔬 Technische Details"):
+        st.dataframe(prob_df.style.format({"Konfidenz": "{:.4f}"}))
+        st.caption(f"Modellpfad: `{model_path}`")
+        st.caption(f"Eingabegröße: {IMG_SIZE[0]}x{IMG_SIZE[1]}x3")
+
+# ── Footer ────────────────────────────────────────────────────────────────────
+st.markdown("""
+<div class='footer'>
+    MüllAI © 2026 — Entwickelt von Aiman Esmail | Hamburg, Deutschland<br>
+    Powered by MobileNetV2 + TensorFlow + Streamlit
+</div>
+""", unsafe_allow_html=True)
