@@ -115,8 +115,91 @@ st.markdown("""
     margin-top: 48px; padding-top: 24px;
     border-top: 1px solid #1f2d1f;
 }
+
+/* Login Page */
+.login-container {
+    max-width: 420px;
+    margin: 80px auto;
+    background: linear-gradient(135deg, #0d1f0d, #111811);
+    border: 1px solid #2d5a2d;
+    border-radius: 20px;
+    padding: 48px 40px;
+}
+.login-logo {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 36px; font-weight: 700;
+    color: #22c55e; text-align: center;
+    margin-bottom: 4px;
+}
+.login-subtitle {
+    text-align: center; color: #6b7280;
+    font-size: 13px; margin-bottom: 32px;
+}
 </style>
 """, unsafe_allow_html=True)
+
+# ── Users Database ────────────────────────────────────────────────────────────
+USERS_FILE = "users.json"
+
+def load_users():
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, "r") as f:
+            return json.load(f)
+    # Default demo users
+    return {
+        "demo@muellaI.de": {"password": "demo1234", "company": "Demo GmbH", "role": "admin"},
+        "test@firma.de": {"password": "test1234", "company": "Test Firma AG", "role": "user"},
+    }
+
+def save_users(users):
+    with open(USERS_FILE, "w") as f:
+        json.dump(users, f, indent=2)
+
+def check_login(email, password):
+    users = load_users()
+    if email in users and users[email]["password"] == password:
+        return users[email]
+    return None
+
+# ── Login Page ────────────────────────────────────────────────────────────────
+def show_login():
+    st.markdown("""
+    <div class='login-container'>
+        <div class='login-logo'>♻️ MüllAI</div>
+        <div class='login-subtitle'>Intelligente Abfallklassifizierung für Unternehmen</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown("#### 🔐 Anmelden")
+        email = st.text_input("E-Mail", placeholder="ihre@firma.de")
+        password = st.text_input("Passwort", type="password", placeholder="••••••••")
+
+        if st.button("Anmelden →", use_container_width=True, type="primary"):
+            user = check_login(email, password)
+            if user:
+                st.session_state["logged_in"] = True
+                st.session_state["user"] = user
+                st.session_state["email"] = email
+                st.rerun()
+            else:
+                st.error("❌ E-Mail oder Passwort falsch.")
+
+        st.divider()
+        st.markdown("""
+        <div style='text-align:center; font-size:12px; color:#4b5563;'>
+        Demo-Zugang: demo@muellaI.de / demo1234
+        </div>
+        """, unsafe_allow_html=True)
+
+# ── Auth Check ────────────────────────────────────────────────────────────────
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+
+if not st.session_state["logged_in"]:
+    show_login()
+    st.stop()
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 CLASSES = [
@@ -351,6 +434,23 @@ def predict(model_tuple, image):
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### ⚙️ Systemstatus")
+
+    # User info
+    user = st.session_state.get("user", {})
+    email = st.session_state.get("email", "")
+    st.markdown(f"""
+    <div style='background:#111811; border:1px solid #2d5a2d; border-radius:8px; padding:12px; margin-bottom:12px;'>
+        <div style='color:#22c55e; font-weight:600; font-size:13px;'>🏢 {user.get('company', '')}</div>
+        <div style='color:#6b7280; font-size:11px;'>{email}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.button("🚪 Abmelden", use_container_width=True):
+        st.session_state["logged_in"] = False
+        st.session_state["user"] = {}
+        st.rerun()
+
+    st.divider()
     model_tuple, model_path = load_model()
     if model_tuple:
         st.success("✅ Modell geladen")
