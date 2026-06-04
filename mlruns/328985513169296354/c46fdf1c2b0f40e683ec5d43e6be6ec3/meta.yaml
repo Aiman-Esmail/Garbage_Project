@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/328985513169296354/c46fdf1c2b0f40e683ec5d43e6be6ec3/artifacts
+end_time: 1780252322948
+entry_point_name: ''
+experiment_id: '328985513169296354'
+lifecycle_stage: active
+run_id: c46fdf1c2b0f40e683ec5d43e6be6ec3
+run_name: MobileNetV2-v1
+run_uuid: c46fdf1c2b0f40e683ec5d43e6be6ec3
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1780252322379
+status: 3
+tags: []
+user_id: esmai
