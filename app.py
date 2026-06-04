@@ -157,8 +157,11 @@ def save_users(users):
 
 def check_login(email, password):
     users = load_users()
-    if email in users and users[email]["password"] == password:
-        return users[email]
+    # Case insensitive email check
+    email_lower = email.lower().strip()
+    for user_email, user_data in users.items():
+        if user_email.lower() == email_lower and user_data["password"] == password:
+            return user_data
     return None
 
 # ── Login Page ────────────────────────────────────────────────────────────────
