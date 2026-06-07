@@ -3,6 +3,8 @@ import os
 import json
 import datetime
 import io
+import base64
+import requests
 from dotenv import load_dotenv
 from PIL import Image
 import numpy as np
@@ -110,6 +112,13 @@ st.markdown("""
     border-radius: 100px; font-size: 12px; font-weight: 500;
     margin: 3px;
 }
+.email-box {
+    background: rgba(59,130,246,0.08);
+    border: 1px solid rgba(59,130,246,0.25);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 16px 0;
+}
 .footer {
     text-align: center; color: #374151; font-size: 12px;
     margin-top: 48px; padding-top: 24px;
@@ -145,7 +154,6 @@ def load_users():
     if os.path.exists(USERS_FILE):
         with open(USERS_FILE, "r") as f:
             return json.load(f)
-    # Default demo users
     return {
         "demo@muellaI.de": {"password": "demo1234", "company": "Demo GmbH", "role": "admin"},
         "test@firma.de": {"password": "test1234", "company": "Test Firma AG", "role": "user"},
@@ -157,7 +165,6 @@ def save_users(users):
 
 def check_login(email, password):
     users = load_users()
-    # Case insensitive email check
     email_lower = email.lower().strip()
     for user_email, user_data in users.items():
         if user_email.lower() == email_lower and user_data["password"] == password:
@@ -367,7 +374,7 @@ def generate_pdf(label, label_de, confidence, tonne, tip, filename):
     story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#d1fae5")))
     story.append(Spacer(1, 0.3*cm))
     story.append(Paragraph(
-        "MullAI v1.0 | Powered by MobileNetV2 | Entwickelt von Aiman Esmail<br/>"
+        "MullAI v1.1 | Powered by MobileNetV2 | Entwickelt von Aiman Esmail<br/>"
         "Hamburg, Schleswig-Holstein, Deutschland",
         footer_style
     ))
@@ -375,6 +382,77 @@ def generate_pdf(label, label_de, confidence, tonne, tip, filename):
     doc.build(story)
     buffer.seek(0)
     return buffer
+
+# ── Send Email via Brevo ──────────────────────────────────────────────────────
+def send_pdf_via_email(recipient_email, pdf_buffer, label_de, confidence):
+    brevo_api_key = os.getenv("BREVO_API_KEY")
+    if not brevo_api_key:
+        return False, "BREVO_API_KEY nicht konfiguriert."
+
+    pdf_base64 = base64.b64encode(pdf_buffer.read()).decode("utf-8")
+    now_str = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+
+    payload = {
+        "sender": {
+            "name": "MüllAI",
+            "email": os.getenv("BREVO_SENDER_EMAIL", "noreply@muellaI.de")
+        },
+        "to": [{"email": recipient_email}],
+        "subject": f"MüllAI Analysebericht – {label_de}",
+        "htmlContent": f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb; padding: 32px; border-radius: 12px;">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <h1 style="color: #16a34a; font-size: 28px; margin: 0;">♻️ MüllAI</h1>
+                <p style="color: #6b7280; font-size: 13px; margin: 4px 0 0 0;">Intelligente Abfallklassifizierung</p>
+            </div>
+            <div style="background: white; border-radius: 8px; padding: 24px; border: 1px solid #d1fae5;">
+                <h2 style="color: #111827; font-size: 18px; margin: 0 0 16px 0;">Ihr Analysebericht</h2>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr style="background: #f0fdf4;">
+                        <td style="padding: 12px; color: #6b7280; font-size: 13px; width: 40%;">Erkannter Abfall</td>
+                        <td style="padding: 12px; color: #111827; font-weight: bold; font-size: 15px;">{label_de}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px; color: #6b7280; font-size: 13px;">Konfidenz</td>
+                        <td style="padding: 12px; color: #16a34a; font-weight: bold; font-size: 15px;">{confidence:.1f}%</td>
+                    </tr>
+                    <tr style="background: #f0fdf4;">
+                        <td style="padding: 12px; color: #6b7280; font-size: 13px;">Analysedatum</td>
+                        <td style="padding: 12px; color: #111827; font-size: 13px;">{now_str}</td>
+                    </tr>
+                </table>
+            </div>
+            <p style="color: #6b7280; font-size: 12px; text-align: center; margin-top: 24px;">
+                Den vollständigen Bericht finden Sie im Anhang als PDF.<br><br>
+                MüllAI © 2026 – Entwickelt von Aiman Esmail | Hamburg, Deutschland
+            </p>
+        </div>
+        """,
+        "attachment": [{
+            "content": pdf_base64,
+            "name": f"MuellAI_{label_de}_Bericht.pdf"
+        }]
+    }
+
+    try:
+        response = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers={
+                "api-key": brevo_api_key,
+                "Content-Type": "application/json"
+            },
+            json=payload,
+            timeout=15
+        )
+        if response.status_code == 201:
+            return True, "E-Mail erfolgreich gesendet!"
+        else:
+            error_msg = response.json().get("message", "Unbekannter Fehler")
+            return False, f"Brevo Fehler: {error_msg}"
+    except requests.exceptions.Timeout:
+        return False, "Zeitüberschreitung beim Senden. Bitte erneut versuchen."
+    except Exception as e:
+        return False, f"Fehler: {str(e)}"
 
 # ── Download Model ────────────────────────────────────────────────────────────
 def download_model():
@@ -438,7 +516,6 @@ def predict(model_tuple, image):
 with st.sidebar:
     st.markdown("### ⚙️ Systemstatus")
 
-    # User info
     user = st.session_state.get("user", {})
     email = st.session_state.get("email", "")
     st.markdown(f"""
@@ -467,14 +544,12 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-    # Corrections counter
     corrections = load_corrections()
     if corrections:
         st.divider()
         st.markdown(f"**📊 Korrekturen: {len(corrections)}**")
         st.caption("Hilft das Modell zu verbessern")
 
-    # History
     history = load_history()
     if history:
         st.divider()
@@ -492,7 +567,7 @@ with st.sidebar:
     st.divider()
     st.markdown("""
     <div style='font-size:12px; color:#4b5563;'>
-    MüllAI v1.0<br>Powered by MobileNetV2<br>Genauigkeit: 94.33%
+    MüllAI v1.1<br>Powered by MobileNetV2<br>Genauigkeit: 94.33%
     </div>
     """, unsafe_allow_html=True)
 
@@ -569,7 +644,44 @@ with col_result:
             use_container_width=True
         )
 
-        # ── Correction Button ──────────────────────────────────────────────
+        # ── Email Section ──────────────────────────────────────────────────
+        st.divider()
+        st.markdown("#### 📧 Bericht per E-Mail erhalten")
+        st.markdown("""
+        <div class='email-box'>
+            <div style='color:#93c5fd; font-size:13px; margin-bottom:4px; font-weight:600;'>
+                📨 PDF-Bericht direkt in Ihr Postfach
+            </div>
+            <div style='color:#6b7280; font-size:12px;'>
+                Geben Sie Ihre E-Mail-Adresse ein und erhalten Sie den vollständigen Analysebericht als PDF.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        email_recipient = st.text_input(
+            "E-Mail Adresse",
+            placeholder="ihre@firma.de",
+            key="email_recipient"
+        )
+
+        if st.button("📨 Bericht senden", use_container_width=True, type="primary"):
+            if email_recipient and "@" in email_recipient and "." in email_recipient:
+                pdf_for_email = generate_pdf(
+                    label, label_de, confidence, tonne, tip,
+                    f"MuellAI_{label_de}_email.pdf"
+                )
+                with st.spinner("E-Mail wird gesendet..."):
+                    success, message = send_pdf_via_email(
+                        email_recipient, pdf_for_email, label_de, confidence
+                    )
+                if success:
+                    st.success(f"✅ {message}")
+                else:
+                    st.error(f"❌ {message}")
+            else:
+                st.warning("⚠️ Bitte gültige E-Mail-Adresse eingeben.")
+
+        # ── Correction Section ─────────────────────────────────────────────
         st.divider()
         st.markdown("⚠️ **Falsch erkannt? Bitte korrigieren:**")
 
